@@ -1,101 +1,70 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
-import os
-import time
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException
+from time import sleep
 
-# Create Chrome Profile and create account manually. Put YOUR email and password here:
-ACCOUNT_EMAIL = "angela@test.com"
-ACCOUNT_PASSWORD = "superSecretTestPassword"
-GYM_URL = "https://appbrewery.github.io/gym/"
+FB_EMAIL = "YOUR FACEBOOK LOGIN EMAIL"
+FB_PASSWORD = "YOUR FACEBOOK PASSWORD"
 
-chrome_options = webdriver.ChromeOptions()
-# Keep the browser open if the script finishes or crashes.
-# If True, you need to *manually* QUIT Chrome before you re-run the script.
-chrome_options.add_experimental_option("detach", True)
-user_data_dir = os.path.join(os.getcwd(), "chrome_profile")
-chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
-driver = webdriver.Chrome(options=chrome_options)
-driver.get(GYM_URL)
+driver = webdriver.Chrome()
 
-wait = WebDriverWait(driver, 2)
+driver.get("http://www.tinder.com")
 
-login_btn = wait.until(ec.element_to_be_clickable((By.ID, "login-button")))
-login_btn.click()
+sleep(2)
+login_button = driver.find_element(By.XPATH, value='//*[text()="Log in"]')
+login_button.click()
 
-email_input = wait.until(ec.presence_of_element_located((By.ID, "email-input")))
-email_input.clear()
-email_input.send_keys(ACCOUNT_EMAIL)
+sleep(2)
+fb_login = driver.find_element(By.XPATH, value='//*[@id="modal-manager"]/div/div/div[1]/div/div[3]/span/div[2]/button')
+fb_login.click()
 
-password_input = driver.find_element(By.ID, "password-input")
-password_input.clear()
-password_input.send_keys(ACCOUNT_PASSWORD)
+sleep(2)
+base_window = driver.window_handles[0]
+fb_login_window = driver.window_handles[1]
+driver.switch_to.window(fb_login_window)
+print(driver.title)
 
-submit_btn = driver.find_element(By.ID, "submit-button")
-submit_btn.click()
+email = driver.find_element(By.XPATH, value='//*[@id="email"]')
+password = driver.find_element(By.XPATH, value='//*[@id="pass"]')
+email.send_keys(FB_EMAIL)
+password.send_keys(FB_PASSWORD)
+password.send_keys(Keys.ENTER)
 
-wait.until(ec.presence_of_element_located((By.ID, "schedule-page")))
-class_cards = driver.find_elements(By.CSS_SELECTOR, "div[id^='class-card-']")
+driver.switch_to.window(base_window)
+print(driver.title)
 
-booked_count = 0
-waitlist_count = 0
-already_booked_count = 0
+sleep(5)
 
-# ----------------  Step 6: Book EVERY Tuesday AND Thursday 6pm class ----------------
-# ----------------         and print a detailed class summary         ----------------
+allow_location_button = driver.find_element(By.XPATH, value='//*[@id="modal-manager"]/div/div/div/div/div[3]/button[1]')
+allow_location_button.click()
 
-processed_classes = []
+notifications_button = driver.find_element(By.XPATH, value='//*[@id="modal-manager"]/div/div/div/div/div[3]/button[2]')
+notifications_button.click()
 
-for card in class_cards:
-    day_group = card.find_element(By.XPATH, "./ancestor::div[contains(@id, 'day-group-')]")
-    day_title = day_group.find_element(By.TAG_NAME, "h2").text
+cookies = driver.find_element(By.XPATH, value='//*[@id="content"]/div/div[2]/div/div/div[1]/button')
+cookies.click()
 
-    # Check if this is a Tuesday OR Thursday
-    if "Tue" in day_title or "Thu" in day_title:
-        time_text = card.find_element(By.CSS_SELECTOR, "p[id^='class-time-']").text
-        if "6:00 PM" in time_text:
-            class_name = card.find_element(By.CSS_SELECTOR, "h3[id^='class-name-']").text
-            button = card.find_element(By.CSS_SELECTOR, "button[id^='book-button-']")
+#Tinder free tier only allows 100 "Likes" per day. If you have a premium account, feel free to change to a while loop.
+for n in range(100):
 
-            # Track the class details
-            class_info = f"{class_name} on {day_title}"
+    #Add a 1 second delay between likes.
+    sleep(1)
 
-            if button.text == "Booked":
-                print(f"✓ Already booked: {class_info}")
-                already_booked_count += 1
-                # Add detailed class info
-                processed_classes.append(f"[Booked] {class_info}")
-            elif button.text == "Waitlisted":
-                print(f"✓ Already on waitlist: {class_info}")
-                already_booked_count += 1
-                # Add detailed class info
-                processed_classes.append(f"[Waitlisted] {class_info}")
-            elif button.text == "Book Class":
-                button.click()
-                print(f"✓ Successfully booked: {class_info}")
-                booked_count += 1
-                # Add detailed class info
-                processed_classes.append(f"[New Booking] {class_info}")
-                time.sleep(0.5)
-            elif button.text == "Join Waitlist":
-                button.click()
-                print(f"✓ Joined waitlist for: {class_info}")
-                waitlist_count += 1
-                # Add detailed class info
-                processed_classes.append(f"[New Waitlist] {class_info}")
-                time.sleep(0.5)
+    try:
+        print("called")
+        like_button = driver.find_element(By.XPATH, value=
+            '//*[@id="content"]/div/div[1]/div/main/div[1]/div/div/div[1]/div/div[2]/div[4]/button')
+        like_button.click()
 
-print("\n--- BOOKING SUMMARY ---")
-print(f"New bookings: {booked_count}")
-print(f"New waitlist entries: {waitlist_count}")
-print(f"Already booked/waitlisted: {already_booked_count}")
-print(f"Total Tuesday & Thursday 6pm classes: {booked_count + waitlist_count + already_booked_count}")
+    #Catches the cases where there is a "Matched" pop-up in front of the "Like" button:
+    except ElementClickInterceptedException:
+        try:
+            match_popup = driver.find_element(By.CSS_SELECTOR, value=".itsAMatch a")
+            match_popup.click()
 
-# Print detailed class list
-print("\n--- DETAILED CLASS LIST ---")
-for class_detail in processed_classes:
-    print(f"  • {class_detail}")
+        #Catches the cases where the "Like" button has not yet loaded, so wait 2 seconds before retrying.
+        except NoSuchElementException:
+            sleep(2)
 
-# Getting a SessionNotCreatedException?
-# Remember to *Quit* Selenium's Chrome Instance before trying to click "run"
+driver.quit()
